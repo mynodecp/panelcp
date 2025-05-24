@@ -369,10 +369,27 @@ install_mynodecp() {
     # Get the parent directory (project root)
     SOURCE_DIR="$(dirname "$SCRIPT_DIR")"
 
-    # If we can't find the source directory properly, use current working directory
+    # If we can't find the source directory properly, try to find it
     if [[ ! -d "$SOURCE_DIR/backend" || ! -d "$SOURCE_DIR/frontend" ]]; then
-        SOURCE_DIR="$(pwd)"
-        log_info "Using current working directory as source: $SOURCE_DIR"
+        # Try current working directory first
+        if [[ -d "$(pwd)/backend" && -d "$(pwd)/frontend" ]]; then
+            SOURCE_DIR="$(pwd)"
+            log_info "Found MyNodeCP files in current working directory: $SOURCE_DIR"
+        # Try the original directory where the script was called from
+        elif [[ -n "$OLDPWD" && -d "$OLDPWD/backend" && -d "$OLDPWD/frontend" ]]; then
+            SOURCE_DIR="$OLDPWD"
+            log_info "Found MyNodeCP files in original directory: $SOURCE_DIR"
+        # Try common locations
+        elif [[ -d "/root/panelcp/backend" && -d "/root/panelcp/frontend" ]]; then
+            SOURCE_DIR="/root/panelcp"
+            log_info "Found MyNodeCP files in /root/panelcp: $SOURCE_DIR"
+        elif [[ -d "$HOME/panelcp/backend" && -d "$HOME/panelcp/frontend" ]]; then
+            SOURCE_DIR="$HOME/panelcp"
+            log_info "Found MyNodeCP files in $HOME/panelcp: $SOURCE_DIR"
+        else
+            SOURCE_DIR="$(pwd)"
+            log_warning "Could not find MyNodeCP source files, using current directory: $SOURCE_DIR"
+        fi
     fi
 
     log_info "Script directory: $SCRIPT_DIR"
