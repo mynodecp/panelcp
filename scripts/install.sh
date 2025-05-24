@@ -356,7 +356,17 @@ install_mynodecp() {
     log_info "Installing MyNodeCP..."
 
     # Get current directory (where the script is running from)
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    SCRIPT_PATH="${BASH_SOURCE[0]}"
+    SCRIPT_DIR="$(dirname "$SCRIPT_PATH")"
+
+    # Handle relative paths properly
+    if [[ "$SCRIPT_DIR" == "." ]]; then
+        SCRIPT_DIR="$(pwd)"
+    elif [[ "$SCRIPT_DIR" != /* ]]; then
+        SCRIPT_DIR="$(pwd)/$SCRIPT_DIR"
+    fi
+
+    # Get the parent directory (project root)
     SOURCE_DIR="$(dirname "$SCRIPT_DIR")"
 
     # If we can't find the source directory properly, use current working directory
