@@ -355,17 +355,88 @@ configure_firewall() {
 install_mynodecp() {
     log_info "Installing MyNodeCP..."
 
+    # Get current directory (where the script is running from)
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    SOURCE_DIR="$(dirname "$SCRIPT_DIR")"
+
+    log_info "Copying files from $SOURCE_DIR to $MYNODECP_HOME..."
+
     # Copy application files
-    cp -r . $MYNODECP_HOME/
+    if [[ -d "$SOURCE_DIR/backend" && -d "$SOURCE_DIR/frontend" ]]; then
+        cp -r "$SOURCE_DIR"/* $MYNODECP_HOME/ 2>/dev/null || {
+            log_error "Failed to copy application files"
+            exit 1
+        }
+    else
+        log_error "MyNodeCP source files not found in $SOURCE_DIR"
+        log_info "Please run this script from the MyNodeCP project root directory"
+        log_info "Expected structure:"
+        log_info "  mynodecp/"
+        log_info "  ├── backend/"
+        log_info "  ├── frontend/"
+        log_info "  └── scripts/install.sh"
+        exit 1
+    fi
+
+    # Verify backend directory exists
+    if [[ ! -d "$MYNODECP_HOME/backend" ]]; then
+        log_error "Backend directory not found after copying files"
+        log_info "Current directory contents:"
+        ls -la "$SOURCE_DIR"
+        exit 1
+    fi
 
     # Build backend
+    log_info "Building backend..."
     cd $MYNODECP_HOME/backend
     export PATH=$PATH:/usr/local/go/bin
+
+    # Initialize Go module if go.mod doesn't exist
+    if [[ ! -f "go.mod" ]]; then
+        log_info "Initializing Go module..."
+        go mod init github.com/mynodecp/mynodecp
+
+        # Add required dependencies
+        log_info "Adding Go dependencies..."
+        cat > go.mod << 'EOF'
+module github.com/mynodecp/mynodecp
+
+go 1.21
+
+require (
+	github.com/gin-gonic/gin v1.9.1
+	github.com/golang-jwt/jwt/v5 v5.2.0
+	github.com/golang-migrate/migrate/v4 v4.17.0
+	github.com/google/uuid v1.5.0
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.0
+	github.com/redis/go-redis/v9 v9.3.1
+	github.com/spf13/cobra v1.8.0
+	github.com/spf13/viper v1.18.2
+	github.com/stretchr/testify v1.8.4
+	go.uber.org/zap v1.26.0
+	golang.org/x/crypto v0.17.0
+	google.golang.org/grpc v1.60.1
+	google.golang.org/protobuf v1.32.0
+	gorm.io/driver/mysql v1.5.2
+	gorm.io/gorm v1.25.5
+)
+EOF
+    fi
+
     go mod download
+    go mod tidy
     go build -o mynodecp-server cmd/server/main.go
 
     # Build frontend
+    log_info "Building frontend..."
     cd $MYNODECP_HOME/frontend
+
+    # Check if package.json exists
+    if [[ ! -f "package.json" ]]; then
+        log_error "Frontend package.json not found"
+        exit 1
+    fi
+
     npm install
     npm run build
 

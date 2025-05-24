@@ -141,6 +141,22 @@ install: ## Install MyNodeCP on the system
 	@echo "Installing MyNodeCP..."
 	@sudo ./scripts/install.sh
 
+install-fix: ## Fix incomplete installation
+	@echo "Fixing MyNodeCP installation..."
+	@if [ ! -d "/opt/mynodecp" ]; then \
+		echo "MyNodeCP not installed. Run 'make install' first."; \
+		exit 1; \
+	fi
+	@sudo cp -r . /opt/mynodecp/
+	@cd /opt/mynodecp/backend && sudo -u mynodecp /usr/local/go/bin/go mod download
+	@cd /opt/mynodecp/backend && sudo -u mynodecp /usr/local/go/bin/go build -o mynodecp-server cmd/server/main.go
+	@cd /opt/mynodecp/frontend && sudo -u mynodecp npm install && sudo -u mynodecp npm run build
+	@sudo chown -R mynodecp:mynodecp /opt/mynodecp
+	@sudo chmod +x /opt/mynodecp/backend/mynodecp-server
+	@sudo systemctl daemon-reload
+	@sudo systemctl restart mynodecp
+	@echo "Installation fixed successfully!"
+
 deploy: dist ## Deploy to production server
 	@echo "Deploying MyNodeCP..."
 	@./scripts/deploy.sh

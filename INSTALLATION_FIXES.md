@@ -5,7 +5,7 @@
 ### 1. Redis Service Name Issue ✅
 **Problem**: The installation script was trying to enable `redis.service` but on some systems it's named `redis-server.service`.
 
-**Solution**: 
+**Solution**:
 - Added dynamic Redis service detection
 - Script now checks for both `redis.service` and `redis-server.service`
 - Falls back gracefully if service detection fails
@@ -132,7 +132,12 @@ sudo ./scripts/update.sh rollback
    sudo ./scripts/install.sh
    ```
 
-4. **Verify installation**:
+4. **If installation fails at the build step**:
+   ```bash
+   make install-fix
+   ```
+
+5. **Verify installation**:
    ```bash
    sudo ./scripts/troubleshoot.sh
    ```
@@ -148,7 +153,7 @@ sudo ./scripts/update.sh rollback
 ## Common Issues and Solutions
 
 ### Issue: Redis service fails to start
-**Solution**: 
+**Solution**:
 ```bash
 # Check which Redis service is available
 systemctl list-unit-files | grep redis
