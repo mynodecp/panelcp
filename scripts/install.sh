@@ -359,13 +359,36 @@ install_mynodecp() {
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     SOURCE_DIR="$(dirname "$SCRIPT_DIR")"
 
+    # If we can't find the source directory properly, use current working directory
+    if [[ ! -d "$SOURCE_DIR/backend" || ! -d "$SOURCE_DIR/frontend" ]]; then
+        SOURCE_DIR="$(pwd)"
+        log_info "Using current working directory as source: $SOURCE_DIR"
+    fi
+
+    log_info "Script directory: $SCRIPT_DIR"
+    log_info "Source directory: $SOURCE_DIR"
+    log_info "Current working directory: $(pwd)"
+
+    # Debug: Show what's in the source directory
+    log_info "Contents of source directory:"
+    ls -la "$SOURCE_DIR" || log_warning "Could not list source directory"
+
     log_info "Copying files from $SOURCE_DIR to $MYNODECP_HOME..."
 
     # Copy application files
     if [[ -d "$SOURCE_DIR/backend" && -d "$SOURCE_DIR/frontend" ]]; then
         cp -r "$SOURCE_DIR"/* $MYNODECP_HOME/ 2>/dev/null || {
             log_error "Failed to copy application files"
-            exit 1
+            log_info "Attempting to copy individual directories..."
+            mkdir -p "$MYNODECP_HOME"
+            cp -r "$SOURCE_DIR/backend" "$MYNODECP_HOME/" || log_error "Failed to copy backend"
+            cp -r "$SOURCE_DIR/frontend" "$MYNODECP_HOME/" || log_error "Failed to copy frontend"
+            cp -r "$SOURCE_DIR/scripts" "$MYNODECP_HOME/" 2>/dev/null || log_warning "No scripts directory to copy"
+            cp "$SOURCE_DIR"/*.md "$MYNODECP_HOME/" 2>/dev/null || log_warning "No markdown files to copy"
+            cp "$SOURCE_DIR"/*.yml "$MYNODECP_HOME/" 2>/dev/null || log_warning "No YAML files to copy"
+            cp "$SOURCE_DIR"/*.yaml "$MYNODECP_HOME/" 2>/dev/null || log_warning "No YAML files to copy"
+            cp "$SOURCE_DIR"/Makefile "$MYNODECP_HOME/" 2>/dev/null || log_warning "No Makefile to copy"
+            cp "$SOURCE_DIR"/Dockerfile "$MYNODECP_HOME/" 2>/dev/null || log_warning "No Dockerfile to copy"
         }
     else
         log_error "MyNodeCP source files not found in $SOURCE_DIR"
@@ -375,6 +398,8 @@ install_mynodecp() {
         log_info "  ├── backend/"
         log_info "  ├── frontend/"
         log_info "  └── scripts/install.sh"
+        log_info "Current directory contents:"
+        ls -la "$SOURCE_DIR"
         exit 1
     fi
 
